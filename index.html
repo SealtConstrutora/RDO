@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Diário de Obra (RDO)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .no-print { display: block; }
+        @media print { .no-print { display: none; } body { background-color: white; } #report-content { box-shadow: none; margin: 0; padding: 0; } }
+        .pdf-section { margin-bottom: 20px; border-left: 4px solid #699BA0; padding-left: 15px; }
+        .pdf-header { background-color: #699BA0; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+        .pdf-table th, .pdf-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .pdf-table th { background-color: #699BA0; color: white; }
+        .pdf-photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+        .pdf-photo-item { border: 1px solid #ddd; padding: 5px; border-radius: 5px; text-align: center; }
+        .pdf-photo { max-width: 100%; max-height: 150px; object-fit: contain; }
+        .signature-line { border-top: 1px solid #000; width: 300px; margin-top: 60px; padding-top: 5px; text-align: center; }
+        .input-error { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4">
+    <div id="report-content" class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-10 mb-8">
+        <!-- Header com logo -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4">
+            <div class="text-center md:text-left flex items-center gap-4">
+                <img src="sealt.png" alt="Logo SEALT" class="h-12 w-auto" id="site-logo" onerror="this.style.display='none'">
+                <div>
+                    <div class="text-2xl md:text-3xl font-bold text-gray-800">Relatório Diário de Obra (RDO)</div>
+                    <div class="mt-2 text-gray-500 font-medium">SEALT CONSTRUTORA</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatório de Obra -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="flex flex-col items-start w-full">
+                <label class="w-full text-gray-600 font-medium">Relatório nº:</label>
+                <input type="text" id="report-number" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm" value="1">
+            </div>
+            <div class="flex flex-col items-start w-full">
+                <label class="w-full text-gray-600 font-medium">Data do relatório:</label>
+                <input type="date" id="report-date" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm">
+            </div>
+            <div class="flex flex-col items-start w-full">
+                <label class="w-full text-gray-600 font-medium">Dia da semana:</label>
+                <input type="text" id="day-of-week" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm" readonly>
+            </div>
+            <div class="flex flex-col items-start w-full">
+                <label class="w-full text-gray-600 font-medium">Obra:</label>
+                <input type="text" id="project-name" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm" placeholder="Nome da obra">
+            </div>
+        </div>
+
+        <!-- Condições Climáticas -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Condição Climática</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left table-auto border-collapse">
+                    <thead>
+                        <tr class="bg-blue-500 text-white rounded-t-lg">
+                            <th class="p-3 font-semibold rounded-tl-lg">Tempo</th>
+                            <th class="p-3 font-semibold">Condição</th>
+                            <th class="p-3 font-semibold rounded-tr-lg">Praticável</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="bg-blue-100 border-b border-blue-200">
+                            <td class="p-3 font-medium text-gray-800">Manhã</td>
+                            <td class="p-3">
+                                <select id="weather-morning" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm">
+                                    <option value="Claro">Claro</option>
+                                    <option value="Nublado">Nublado</option>
+                                    <option value="Chuvoso">Chuvoso</option>
+                                    <option value="Parcialmente nublado">Parcialmente nublado</option>
+                                </select>
+                            </td>
+                            <td class="p-3">
+                                <select id="practicable-morning" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm">
+                                    <option value="Sim">Sim</option>
+                                    <option value="Não">Não</option>
+                                    <option value="Parcialmente">Parcialmente</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr class="bg-blue-100 border-b border-blue-200">
+                            <td class="p-3 font-medium text-gray-800">Tarde</td>
+                            <td class="p-3">
+                                <select id="weather-afternoon" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm">
+                                    <option value="Claro">Claro</option>
+                                    <option value="Nublado">Nublado</option>
+                                    <option value="Chuvoso">Chuvoso</option>
+                                    <option value="Parcialmente nublado">Parcialmente nublado</option>
+                                </select>
+                            </td>
+                            <td class="p-3">
+                                <select id="practicable-afternoon" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm">
+                                    <option value="Sim">Sim</option>
+                                    <option value="Não">Não</option>
+                                    <option value="Parcialmente">Parcialmente</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Mão de Obra -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Mão de Obra</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left table-auto border-collapse">
+                    <thead>
+                        <tr class="bg-blue-500 text-white rounded-t-lg">
+                            <th class="p-3 font-semibold rounded-tl-lg">Função</th>
+                            <th class="p-3 font-semibold rounded-tr-lg">Qtd</th>
+                        </tr>
+                    </thead>
+                    <tbody id="labor-table-body">
+                        <!-- Tabela preenchida via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Atividades -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Atividades</h2>
+            <div id="activities-container"></div>
+            <button id="add-activity-btn" class="no-print mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Adicionar Atividade</button>
+        </div>
+
+        <!-- Ocorrências -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Ocorrências</h2>
+            <div id="occurrences-container"></div>
+            <button id="add-occurrence-btn" class="no-print mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">Adicionar Ocorrência</button>
+        </div>
+
+        <!-- Fotos -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Fotos</h2>
+            <input type="file" id="photo-upload" multiple accept="image/*" class="no-print w-full rounded-md border-gray-300 shadow-sm p-2 cursor-pointer">
+            <div id="photo-preview-container" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4"></div>
+        </div>
+
+        <!-- Assinatura -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Assinado por:</h2>
+            <input type="text" id="signed-by" class="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm" placeholder="Nome do responsável">
+        </div>
+    </div>
+
+    <!-- Botões -->
+    <div class="flex justify-center no-print">
+        <button id="generate-pdf-btn" class="w-full md:w-auto px-6 py-3 bg-blue-500 text-white rounded-md font-semibold hover:bg-blue-600">Gerar PDF</button>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const reportDateInput = document.getElementById('report-date');
+        const dayOfWeekInput = document.getElementById('day-of-week');
+        const laborTableBody = document.getElementById('labor-table-body');
+        const activitiesContainer = document.getElementById('activities-container');
+        const occurrencesContainer = document.getElementById('occurrences-container');
+        const addActivityBtn = document.getElementById('add-activity-btn');
+        const addOccurrenceBtn = document.getElementById('add-occurrence-btn');
+        const photoUploadInput = document.getElementById('photo-upload');
+        const photoPreviewContainer = document.getElementById('photo-preview-container');
+        const generatePdfBtn = document.getElementById('generate-pdf-btn');
+        const siteLogo = document.getElementById('site-logo');
+        let uploadedPhotos = [];
+        const headerColor = '#699BA0';
+
+        // Logo em base64 como fallback
+        const logoBase64Fallback = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMTUwIDYwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iNjAiIGZpbGw9IiM2OTlCQTAiLz48dGV4dCB4PSI3NSIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNPTlNUUlVUT1JBIFNFQUxUPC90ZXh0Pjwvc3ZnPg==";
+
+        const today = new Date();
+        reportDateInput.value = today.toISOString().split('T')[0];
+        updateDayOfWeek(today);
+        reportDateInput.addEventListener('change', e => updateDayOfWeek(new Date(e.target.value + 'T00:00:00')));
+        function updateDayOfWeek(date) {
+            const days = ['Domingo','Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira','Sábado'];
+            dayOfWeekInput.value = days[date.getDay()];
+        }
+
+        // Mão de obra
+        const laborRoles = ['PS Produção','Pedreiro','Carpinteiro','Armador','Escavador','Operador de máquinas','Ajudante','Mão de obra especializada'];
+        laborRoles.forEach(role => {
+            const row = document.createElement('tr');
+            row.className = "bg-blue-100 border-b border-blue-200";
+            row.innerHTML = `<td class="p-3 font-medium text-gray-800">${role}</td><td class="p-3"><input type="number" value="0" min="0" class="w-20 rounded-md border-gray-300 shadow-sm p-2 text-sm"></td>`;
+            laborTableBody.appendChild(row);
+        });
+
+        // Atividades e Ocorrências
+        addActivityBtn.addEventListener('click', () => {
+            const activityRow = document.createElement('div');
+            activityRow.className = "flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-4 mb-2";
+            activityRow.innerHTML = `<input type="text" class="flex-grow w-full rounded-md border-gray-300 shadow-sm p-2 text-sm" placeholder="Descrição da Atividade"><select class="rounded-md border-gray-300 shadow-sm p-2 text-sm w-full md:w-auto"><option value='Em andamento'>Em andamento</option><option value='Concluído'>Concluído</option><option value='Pendente'>Pendente</option><option value='Parado'>Parado</option></select><button class='remove-btn px-2 py-1 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400'>Remover</button>`;
+            activitiesContainer.appendChild(activityRow);
+            activityRow.querySelector('.remove-btn').addEventListener('click', ()=>activitiesContainer.removeChild(activityRow));
+        });
+        addOccurrenceBtn.addEventListener('click', () => {
+            const occurrenceRow = document.createElement('div');
+            occurrenceRow.className = "flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-4 mb-2";
+            occurrenceRow.innerHTML = `<input type="text" class="flex-grow w-full rounded-md border-gray-300 shadow-sm p-2 text-sm" placeholder="Descrição da Ocorrência"><button class='remove-btn px-2 py-1 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400'>Remover</button>`;
+            occurrencesContainer.appendChild(occurrenceRow);
+            occurrenceRow.querySelector('.remove-btn').addEventListener('click', ()=>occurrencesContainer.removeChild(occurrenceRow));
+        });
+
+        // Fotos
+        photoUploadInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            if(files){
+                Array.from(files).forEach(file=>{
+                    if(!file.type.match('image.*')) return;
+                    const reader = new FileReader();
+                    reader.onload = (e)=>{
+                        uploadedPhotos.push({data:e.target.result,name:file.name});
+                        const imgContainer=document.createElement('div');
+                        imgContainer.className="relative rounded-lg overflow-hidden shadow-md group";
+                        imgContainer.innerHTML=`<img src="${e.target.result}" class="w-full h-32 object-cover rounded-lg transition-transform transform group-hover:scale-110"><div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"><span class="text-white text-lg font-bold">Remover</span></div>`;
+                        photoPreviewContainer.appendChild(imgContainer);
+                        imgContainer.addEventListener('click',()=>{
+                            const index = uploadedPhotos.findIndex(photo=>photo.data===e.target.result);
+                            if(index>-1) uploadedPhotos.splice(index,1);
+                            imgContainer.remove();
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+
+        // Validação
+        function validateForm(){
+            let isValid=true;
+            const requiredFields=[document.getElementById('report-number'),document.getElementById('project-name'),document.getElementById('signed-by')];
+            requiredFields.forEach(field=>{if(!field.value.trim()){field.classList.add('input-error');isValid=false;}else{field.classList.remove('input-error');}});
+            return isValid;
+        }
+
+        function showStatusMessage(text,bgColor){
+            const message=document.createElement('div');
+            message.className=`fixed bottom-5 right-5 ${bgColor} text-white px-6 py-3 rounded-lg shadow-xl animate-fade-in z-50`;
+            message.textContent=text;
+            document.body.appendChild(message);
+            setTimeout(()=>message.remove(),3000);
+        }
+
+        function hexToRgb(hex){
+            const result=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result?{r:parseInt(result[1],16),g:parseInt(result[2],16),b:parseInt(result[3],16)}:null;
+        }
+
+        // Função para formatar a data como DD-MM-YYYY
+        function formatDateForFileName(dateString) {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        }
+
+        // Função simplificada para capturar a logo
+        async function captureLogoAsBase64() {
+            return new Promise((resolve) => {
+                // Primeiro tenta usar html2canvas na logo da página
+                if (siteLogo && siteLogo.offsetWidth > 0 && siteLogo.offsetHeight > 0) {
+                    html2canvas(siteLogo, {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: null
+                    }).then(canvas => {
+                        try {
+                            const dataUrl = canvas.toDataURL('image/png');
+                            resolve(dataUrl);
+                        } catch (error) {
+                            console.warn('Erro ao converter logo:', error);
+                            resolve(logoBase64Fallback);
+                        }
+                    }).catch(error => {
+                        console.warn('html2canvas falhou:', error);
+                        resolve(logoBase64Fallback);
+                    });
+                } else {
+                    // Se não conseguir, usa o fallback
+                    resolve(logoBase64Fallback);
+                }
+            });
+        }
+
+        // Gerar PDF
+        generatePdfBtn.addEventListener('click', async ()=>{
+            if(!validateForm()){
+                showStatusMessage("Preencha os campos obrigatórios!","bg-red-500");
+                return;
+            }
+            
+            showStatusMessage("Gerando PDF...","bg-gray-500");
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p','mm','a4');
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const margin = 15;
+                let currentY = margin;
+
+                // Capturar a logo
+                let logoBase64 = await captureLogoAsBase64();
+
+                // Cabeçalho COM LOGO
+                const rgb = hexToRgb(headerColor);
+                if(rgb) pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+                pdf.rect(0, 0, pageWidth, 25, 'F');
+                
+                // Adicionar logo
+                if (logoBase64) {
+                    try {
+                        pdf.addImage(logoBase64, 'PNG', margin, 5, 25, 15);
+                    } catch (error) {
+                        console.warn('Erro ao adicionar logo:', error);
+                    }
+                }
+                
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(18);
+                pdf.text("Relatório Diário de Obra (RDO)", pageWidth/2, 15, {align: 'center'});
+                pdf.setFontSize(11);
+                pdf.text("SEALT CONSTRUTORA", pageWidth/2, 22, {align: 'center'});
+                pdf.setTextColor(0, 0, 0);
+                currentY = 35;
+
+                // Informações gerais
+                pdf.setFontSize(14);
+                if(rgb) pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+                pdf.text("INFORMAÇÕES GERAIS", margin, currentY);
+                currentY += 10;
+                
+                pdf.setFontSize(11);
+                pdf.setTextColor(0, 0, 0);
+                pdf.text(`Relatório nº: ${document.getElementById('report-number').value}`, margin, currentY);
+                pdf.text(`Data: ${reportDateInput.value}`, pageWidth/2, currentY);
+                currentY += 7;
+                pdf.text(`Dia da semana: ${dayOfWeekInput.value}`, margin, currentY);
+                pdf.text(`Obra: ${document.getElementById('project-name').value}`, pageWidth/2, currentY);
+                currentY += 15;
+
+                // Condições Climáticas
+                pdf.setFontSize(14);
+                if(rgb) pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+                pdf.text("CONDIÇÃO CLIMÁTICA", margin, currentY);
+                currentY += 10;
+                
+                pdf.setFontSize(11);
+                pdf.setTextColor(0, 0, 0);
+                const weatherMorning = document.getElementById('weather-morning').value;
+                const practicableMorning = document.getElementById('practicable-morning').value;
+                const weatherAfternoon = document.getElementById('weather-afternoon').value;
+                const practicableAfternoon = document.getElementById('practicable-afternoon').value;
+                
+                pdf.text(`Manhã: ${weatherMorning} (Praticável: ${practicableMorning})`, margin, currentY);
+                currentY += 7;
+                pdf.text(`Tarde: ${weatherAfternoon} (Praticável: ${practicableAfternoon})`, margin, currentY);
+                currentY += 15;
+
+                // Mão de obra
+                pdf.setFontSize(14);
+                if(rgb) pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+                pdf.text("MÃO DE OBRA", margin, currentY);
+                currentY += 10;
+                
+                pdf.setFontSize(11);
+                pdf.setTextColor(0, 0, 0);
+                const laborRows = laborTableBody.querySelectorAll('tr');
+                laborRows.forEach(row => {
+                    if(currentY > pageHeight - margin - 10) {
+                        pdf.addPage();
+                        currentY = margin;
+                    }
+                    const role = row.querySelector('td:first-child').textContent;
+                    const quantity = row.querySelector('input').value;
+                    if(quantity > 0) {
+                        pdf.text(`${role}: ${quantity}`, margin, currentY);
+                        currentY += 7;
+                    }
+                });
+                currentY += 10;
+
+                // Atividades
+                const activities = activitiesContainer.querySelectorAll('div');
+                if(activities.length > 0) {
+                    if(currentY > pageHeight - margin - 20) {
+                        pdf.addPage();
+                        currentY = margin;
+                    }
+                    pdf.setFontSize(14);
+                    if(rgb) pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+                    pdf.text("ATIVIDADES", margin, currentY);
+                    currentY += 10;
+                    
+                    pdf.setFontSize(11);
+                    pdf.setTextColor(0, 0, 0);
+                    activities.forEach(activity => {
+                        if(currentY > pageHeight - margin - 10) {
+                            pdf.addPage();
+                            currentY = margin;
+                        }
+                        const description = activity.querySelector('input').value;
+                        const status = activity.querySelector('select').value;
+                        if(description) {
+                            const splitText = pdf.splitTextToSize(`• ${description} (${status})`, pageWidth - 2*margin);
+                            pdf.text(splitText, margin, currentY);
+                            currentY += 7 * splitText.length;
+                        }
+                    });
+                    currentY += 10;
+                }
+
+                // Ocorrências
+                const occurrences = occurrencesContainer.querySelectorAll('div');
+                if(occurrences.length > 0) {
+                    if(currentY > pageHeight - margin - 20) {
+                        pdf.addPage();
+                        currentY = margin;
+                    }
+                    pdf.setFontSize(14);
+                    if(rgb) pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+                    pdf.text("OCORRÊNCIAS", margin, currentY);
+                    currentY += 10;
+                    
+                    pdf.setFontSize(11);
+                    pdf.setTextColor(0, 0, 0);
+                    occurrences.forEach(occurrence => {
+                        if(currentY > pageHeight - margin - 10) {
+                            pdf.addPage();
+                            currentY = margin;
+                        }
+                        const description = occurrence.querySelector('input').value;
+                        if(description) {
+                            const splitText = pdf.splitTextToSize(`• ${description}`, pageWidth - 2*margin);
+                            pdf.text(splitText, margin, currentY);
+                            currentY += 7 * splitText.length;
+                        }
+                    });
+                    currentY += 10;
+                }
+
+                // Fotos
+                if(uploadedPhotos.length > 0) {
+                    if(currentY > pageHeight - margin - 80) {
+                        pdf.addPage();
+                        currentY = margin;
+                    }
+                    pdf.setFontSize(14);
+                    if(rgb) pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+                    pdf.text("FOTOS", margin, currentY);
+                    currentY += 10;
+                    
+                    const photosPerRow = 2;
+                    const photoWidth = (pageWidth - 2*margin - (photosPerRow-1)*10) / photosPerRow;
+                    const photoHeight = photoWidth * 0.75;
+                    
+                    for(let i = 0; i < uploadedPhotos.length; i++) {
+                        if(currentY + photoHeight > pageHeight - margin) {
+                            pdf.addPage();
+                            currentY = margin;
+                        }
+                        
+                        const col = i % photosPerRow;
+                        const x = margin + col * (photoWidth + 10);
+                        
+                        try {
+                            pdf.addImage(uploadedPhotos[i].data, 'JPEG', x, currentY, photoWidth, photoHeight);
+                        } catch(err) {
+                            try {
+                                pdf.addImage(uploadedPhotos[i].data, 'PNG', x, currentY, photoWidth, photoHeight);
+                            } catch(e) {
+                                console.warn('Não foi possível adicionar a imagem', e);
+                            }
+                        }
+                        
+                        pdf.setFontSize(10);
+                        pdf.text(`Foto ${i+1}`, x, currentY + photoHeight + 5);
+                        
+                        if(col === photosPerRow - 1) {
+                            currentY += photoHeight + 15;
+                        }
+                        
+                        if(i === uploadedPhotos.length - 1 && col !== photosPerRow - 1) {
+                            currentY += photoHeight + 15;
+                        }
+                    }
+                    currentY += 20;
+                }
+
+                // Assinatura
+                if(currentY > pageHeight - margin - 30) {
+                    pdf.addPage();
+                    currentY = margin;
+                }
+                pdf.setFontSize(14);
+                if(rgb) pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+                pdf.text("ASSINATURA", margin, currentY);
+                currentY += 10;
+                
+                pdf.setFontSize(11);
+                pdf.setTextColor(0, 0, 0);
+                pdf.text(`Assinado por: ${document.getElementById('signed-by').value}`, margin, currentY);
+                currentY += 20;
+                
+                // Linha de assinatura
+                pdf.line(margin, currentY, margin + 100, currentY);
+                pdf.text("Assinatura", margin, currentY + 5);
+                
+                // Data
+                pdf.text(`Data: ${new Date().toLocaleDateString()}`, pageWidth - margin - 40, currentY);
+
+                // Salvar o PDF
+                const fileName = `RDO-${formatDateForFileName(reportDateInput.value)}-${document.getElementById('project-name').value}.pdf`;
+                pdf.save(fileName);
+                
+                showStatusMessage("PDF gerado com sucesso!", "bg-green-500");
+            } catch(error) {
+                console.error("Erro ao gerar PDF:", error);
+                showStatusMessage("Erro ao gerar PDF", "bg-red-500");
+            }
+        });
+
+    });
+    </script>
+</body>
+</html>
