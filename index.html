@@ -185,14 +185,48 @@
         // Logo em base64 como fallback
         const logoBase64Fallback = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMTUwIDYwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iNjAiIGZpbGw9IiM2OTlCQTAiLz48dGV4dCB4PSI3NSIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNPTlNUUlVUT1JBIFNFQUxUPC90ZXh0Pjwvc3ZnPg==";
 
-        const today = new Date();
-        reportDateInput.value = today.toISOString().split('T')[0];
-        updateDayOfWeek(today);
-        reportDateInput.addEventListener('change', e => updateDayOfWeek(new Date(e.target.value + 'T00:00:00')));
-        function updateDayOfWeek(date) {
-            const days = ['Domingo','Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira','Sábado'];
-            dayOfWeekInput.value = days[date.getDay()];
+        // FUNÇÕES CORRIGIDAS PARA DATA - SEM PROBLEMA DE FUSO HORÁRIO
+        function getCurrentDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
+
+        function formatDateForDisplay(dateString) {
+            const [year, month, day] = dateString.split('-');
+            return `${day}/${month}/${year}`;
+        }
+
+        function formatDateForFileName(dateString) {
+            const [year, month, day] = dateString.split('-');
+            return `${day}-${month}-${year}`;
+        }
+
+        function getDayOfWeek(dateString) {
+            const days = ['Domingo','Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira','Sábado'];
+            const [year, month, day] = dateString.split('-');
+            const date = new Date(year, month - 1, day);
+            return days[date.getDay()];
+        }
+
+        function getCurrentDateForSignature() {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // Inicializar data atual
+        const today = getCurrentDate();
+        reportDateInput.value = today;
+        dayOfWeekInput.value = getDayOfWeek(today);
+        
+        reportDateInput.addEventListener('change', e => {
+            dayOfWeekInput.value = getDayOfWeek(e.target.value);
+        });
 
         // Mão de obra
         const laborRoles = ['Gestão Produção','Ajudante','Armador','Carpinteiro','Escavador','Pintor','Pedreiro','Operador de máquinas','Mão de obra especializada'];
@@ -262,15 +296,6 @@
         function hexToRgb(hex){
             const result=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result?{r:parseInt(result[1],16),g:parseInt(result[2],16),b:parseInt(result[3],16)}:null;
-        }
-
-        // Função para formatar a data como DD-MM-YYYY
-        function formatDateForFileName(dateString) {
-            const date = new Date(dateString);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}-${month}-${year}`;
         }
 
         // Função simplificada para capturar a logo
@@ -352,8 +377,11 @@
                 
                 pdf.setFontSize(11);
                 pdf.setTextColor(0, 0, 0);
+                
+                // USAR AS FUNÇÕES CORRIGIDAS PARA DATA
+                const reportDateDisplay = formatDateForDisplay(reportDateInput.value);
                 pdf.text(`Relatório nº: ${document.getElementById('report-number').value}`, margin, currentY);
-                pdf.text(`Data: ${reportDateInput.value}`, pageWidth/2, currentY);
+                pdf.text(`Data: ${reportDateDisplay}`, pageWidth/2, currentY);
                 currentY += 7;
                 pdf.text(`Dia da semana: ${dayOfWeekInput.value}`, margin, currentY);
                 pdf.text(`Obra: ${document.getElementById('project-name').value}`, pageWidth/2, currentY);
@@ -526,11 +554,13 @@
                 pdf.line(margin, currentY, margin + 100, currentY);
                 pdf.text("Assinatura", margin, currentY + 5);
                 
-                // Data
-                pdf.text(`Data: ${new Date().toLocaleDateString()}`, pageWidth - margin - 40, currentY);
+                // Data - USAR FUNÇÃO CORRIGIDA
+                const currentDate = getCurrentDateForSignature();
+                pdf.text(`Data: ${currentDate}`, pageWidth - margin - 40, currentY);
 
-                // Salvar o PDF
-                const fileName = `RDO-${formatDateForFileName(reportDateInput.value)}-${document.getElementById('project-name').value}.pdf`;
+                // Salvar o PDF - USAR FUNÇÃO CORRIGIDA
+                const fileNameDate = formatDateForFileName(reportDateInput.value);
+                const fileName = `RDO-${fileNameDate}-${document.getElementById('project-name').value}.pdf`;
                 pdf.save(fileName);
                 
                 showStatusMessage("PDF gerado com sucesso!", "bg-green-500");
@@ -543,7 +573,4 @@
     });
     </script>
 </body>
-
 </html>
-
-
