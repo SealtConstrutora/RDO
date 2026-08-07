@@ -213,7 +213,7 @@
       }
       function formatDateForFileName(dateString) {
         const [year, month, day] = dateString.split('-');
-        return `${day}-${month}-${year}`;
+        return `${year}.${month}.${day}`;
       }
       function getDayOfWeek(dateString) {
         const days = ['Domingo','Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira','Sábado'];
@@ -628,7 +628,7 @@
           // Salvar PDF (nome seguro)
           const fileNameDate = formatDateForFileName(reportDateInput.value);
           const obra = sanitizeFileName(document.getElementById('project-name').value);
-          const fileName = `RDO-${fileNameDate}-${obra}.pdf`;
+          const fileName = `${fileNameDate} ${obra} - RDO.pdf`;
           pdf.save(fileName);
 
           showStatusMessage("PDF gerado com sucesso!", "bg-green-500");
