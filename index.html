@@ -104,6 +104,7 @@
           <p class="helper">Se já existem 25 relatórios desta obra, informe 26. Cada obra tem sua própria sequência.</p>
           <button class="portal-btn">Cadastrar obra</button>
         </form>
+        <p class="helper">Edite o próximo número e clique em Salvar número. Isso ajusta a sequência dos novos RDOs, sem alterar os PDFs já gerados.</p>
         <div id="project-list"></div>
       </section>
       <section class="portal-card">
@@ -321,13 +322,40 @@
         const selection = projectSelect.value;
         projectSelect.replaceChildren(new Option('Selecione uma obra cadastrada', ''));
         data.projects.forEach(p => projectSelect.add(new Option(p.name, p.id)));
-        projectSelect.value = selection;
+        projectSelect.value = data.projects.some(p => p.id === selection) ? selection : '';
+        if (selection && !projectSelect.value) { committedReport = null; manualNumber = false; }
         const projects = document.getElementById('project-list');
         projects.replaceChildren();
         data.projects.forEach(project => {
-          const row = document.createElement('div'); row.className = 'registry-row';
-          const label = document.createElement('span'); label.textContent = `${project.name} · próximo nº ${project.next}`;
-          row.append(label); projects.append(row);
+          const row = document.createElement('form'); row.className = 'registry-row';
+          row.style.flexDirection = 'column'; row.style.alignItems = 'stretch';
+          const name = document.createElement('strong'); name.textContent = project.name;
+          const label = document.createElement('label'); label.textContent = 'Próximo RDO nº'; label.className = 'helper';
+          const number = document.createElement('input'); number.type = 'number'; number.min = '1'; number.max = '999999999'; number.step = '1'; number.required = true; number.value = project.next;
+          number.className = 'rounded-md p-2'; number.style.width = '100%'; number.setAttribute('aria-label', `Próximo RDO de ${project.name}`);
+          label.append(number);
+          const actions = document.createElement('div'); actions.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap';
+          const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Salvar número'; save.className = 'portal-btn portal-secondary'; save.style.color = '#294e51';
+          const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Excluir obra'; remove.className = 'portal-btn portal-secondary';
+          row.onsubmit = async event => {
+            event.preventDefault();
+            const next = Number(number.value);
+            if (!number.checkValidity() || !Number.isSafeInteger(next) || next < 1 || next > 999999999) { number.reportValidity(); return; }
+            await mutateRegistry(data => {
+              const current = data.projects.find(p => p.id === project.id);
+              if (!current) throw new Error('A obra não está mais cadastrada.');
+              current.next = next;
+              if (projectSelect.value === project.id) { committedReport = null; manualNumber = false; }
+            });
+          };
+          remove.onclick = () => {
+            if (!confirm(`Excluir a obra "${project.name}" e sua sequência do cadastro? Os PDFs já baixados permanecem no seu aparelho.`)) return;
+            mutateRegistry(data => {
+              data.projects = data.projects.filter(p => p.id !== project.id);
+              if (projectSelect.value === project.id) { committedReport = null; manualNumber = false; }
+            });
+          };
+          actions.append(save, remove); row.append(name, label, actions); projects.append(row);
         });
         if (!data.projects.length) projects.textContent = 'Nenhuma obra cadastrada.';
         const counts = new Map(Array.from(laborTableBody.rows, row => [row.cells[0].textContent, row.querySelector('input').value]));
