@@ -30,19 +30,8 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .no-print { display: block; }
     @media print {
-      .no-print { display: none; }
-      [hidden] { display: none !important; }
-    input, select, textarea { border: 1px solid #d1d5db; }
-    button { cursor: pointer; } button:disabled { opacity: .5; cursor: wait; }
-    .portal { max-width: 896px; margin: 0 auto 24px; }
-    .portal-card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px #00000009; }
-    .portal-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 20px; }
-    .portal-btn { border-radius: 8px; padding: 12px 20px; background: #527f83; color: white; font-weight: 600; }
-    .portal-secondary { background: #e8eff0; color: #294e51; }
-    .registry-row { display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid #e5e7eb; padding:14px 0; overflow-wrap:anywhere; }
-    .registry-row button { font-size: 13px; color:#a52c2c; }
-    .helper { color:#64748b; font-size:13px; margin-top:8px; }
-    body { background-color: white; }
+      .no-print { display: none !important; }
+      body { background-color: white; }
       #report-content { box-shadow: none; margin: 0; padding: 0; }
     }
     .pdf-section { margin-bottom: 20px; border-left: 4px solid #699BA0; padding-left: 15px; }
@@ -63,7 +52,32 @@
     <div style="color:#527f83;font-size:13px;font-weight:700;letter-spacing:2px">SEALT CONSTRUTORA</div>
     <h1 style="font-size:28px;font-weight:700;color:#1f2937">Diário de obra</h1>
     <p class="helper">Organize as obras e registre o andamento de cada dia.</p>
+    <p id="sync-status" class="helper" role="status">Conectando aos cadastros compartilhados…</p>
   </header>
+  <section id="setup-view" class="portal" hidden>
+    <div class="portal-card">
+      <h2 style="font-size:24px;font-weight:700">Ativar os cadastros compartilhados</h2>
+      <p class="helper">Esta configuração é feita uma vez pelo responsável pelo site. Depois, publique o arquivo configurado no GitHub para todos usarem a mesma conexão.</p>
+      <ol style="list-style:decimal;padding-left:24px;margin:20px 0;line-height:1.8">
+        <li>Abra seu projeto no <a href="https://supabase.com/dashboard" target="_blank" rel="noopener" style="color:#527f83;text-decoration:underline">Supabase</a>.</li>
+        <li>Baixe o SQL abaixo e execute todo o conteúdo em <strong>SQL Editor → New query → Run</strong>. Ele cria tabelas próprias para este RDO.</li>
+        <li>Copie a URL do projeto e a chave pública <strong>Publishable</strong> (ou <strong>anon</strong>) do painel.</li>
+        <li>Preencha os campos e baixe o HTML configurado. Substitua o <strong>index.html</strong> do seu GitHub e mantenha a imagem <strong>sealt.png</strong>.</li>
+        <li>No site publicado, entre em Cadastro com a senha padrão e use <strong>Importar cadastros deste navegador</strong> se quiser aproveitar as obras e funções antigas.</li>
+      </ol>
+      <button id="download-sql" class="portal-btn portal-secondary">Baixar SQL do banco</button>
+      <form id="setup-form" style="display:grid;gap:12px;margin-top:24px">
+        <label for="setup-url">URL do projeto Supabase</label>
+        <input id="setup-url" type="url" required placeholder="https://seu-projeto.supabase.co" class="rounded-md p-2">
+        <label for="setup-key">Chave pública Publishable ou anon</label>
+        <input id="setup-key" type="text" required autocomplete="off" class="rounded-md p-2">
+        <p class="helper">Use somente a chave pública. Nunca use uma chave secret ou service_role.</p>
+        <p id="setup-error" role="alert" style="color:#b91c1c"></p>
+        <button class="portal-btn">Baixar index.html configurado</button>
+      </form>
+      <p class="helper">Fotos e PDFs continuam sendo preparados no aparelho; esta integração compartilha os cadastros e a numeração. Números são reservados antes da montagem do PDF; em caso de falha, tente novamente no mesmo formulário para reutilizar a reserva.</p>
+    </div>
+  </section>
   <main id="home-view" class="portal">
     <div class="portal-grid">
       <button id="open-report" class="portal-card" style="text-align:left;border-top:4px solid #699ba0">
@@ -75,7 +89,7 @@
         <span class="helper">Cadastre obras, a numeração inicial e as funções da equipe.</span>
       </button>
     </div>
-    <p class="helper" style="padding:16px 0">Os cadastros e a sequência são salvos neste navegador. Outros aparelhos não compartilham esses dados. Limpar os dados do site apaga os cadastros e a numeração.</p>
+    <p class="helper" style="padding:16px 0">Obras, funções e sequência compartilhadas entre todos os aparelhos. É necessário estar conectado à internet para emitir um novo RDO.</p>
   </main>
   <section id="auth-view" class="portal" hidden>
     <button class="portal-btn portal-secondary back-home" style="margin-bottom:20px">← Início</button>
@@ -88,11 +102,15 @@
         <p id="auth-error" role="alert" style="color:#b91c1c;font-size:14px"></p>
         <button id="auth-submit" class="portal-btn">Entrar</button>
       </form>
-      <p class="helper">Senha padrão para acessar o Cadastro. Os cadastros continuam salvos somente neste navegador.</p>
+      <p class="helper">A senha é verificada no banco de dados. As alterações do Cadastro valem para todos os aparelhos.</p>
     </div>
   </section>
   <section id="registry-view" class="portal" hidden>
     <button class="portal-btn portal-secondary back-home" style="margin-bottom:20px">← Início</button>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+      <button id="refresh-registry" class="portal-btn portal-secondary">Atualizar cadastros</button>
+      <button id="import-local" class="portal-btn portal-secondary">Importar cadastros deste navegador</button>
+    </div>
     <div class="portal-grid">
       <section class="portal-card">
         <h2 style="font-size:22px;font-weight:700">Obras</h2>
@@ -264,6 +282,145 @@
   </div>
 
   </section>
+  <script id="rdo-config" type="application/json">{"url":"https://ytktpdgshpnwtssdoyct.supabase.co","key":"sb_publishable_DKtiOEmj_WpQIWpJ_ayrOA_1EkgU6Yv"}</script>
+  <script id="database-setup" type="text/plain">-- RDO SEALT — execute uma vez no SQL Editor do Supabase.
+-- Schema próprio: não altera tabelas de outros aplicativos.
+begin;
+create schema if not exists rdo_private;
+revoke all on schema rdo_private from public, anon, authenticated;
+create table if not exists rdo_private.settings (
+  id boolean primary key default true check (id),
+  password_salt text not null,
+  password_hash text not null
+);
+-- Senha compartilhada definida pelo administrador. Não é publicada no HTML.
+insert into rdo_private.settings(id,password_salt,password_hash)
+values (true, 'RDO-ALTIS-2026-DF731C', '2cb13e76b0614f82ed2af4e7b1783bfb16ea0b01a22fdc9618d346b8d81282c0')
+on conflict (id) do nothing;
+create table if not exists rdo_private.projects (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (length(btrim(name)) between 1 and 100),
+  next_number bigint not null default 1 check (next_number between 1 and 1000000000),
+  active boolean not null default true
+);
+create unique index if not exists rdo_project_name on rdo_private.projects(lower(btrim(name))) where active;
+create table if not exists rdo_private.roles (
+  name text primary key check (length(btrim(name)) between 1 and 80)
+);
+create unique index if not exists rdo_role_name on rdo_private.roles(lower(btrim(name)));
+create table if not exists rdo_private.issues (
+  request_id uuid primary key,
+  project_id uuid not null references rdo_private.projects(id),
+  number bigint not null check (number between 1 and 999999999),
+  manual boolean not null,
+  created_at timestamptz not null default now()
+);
+-- Somente a primeira instalação preenche funções padrão.
+-- Uma marca evita recriar funções excluídas ao executar novamente.
+create table if not exists rdo_private.migrations (id text primary key);
+do $$ begin
+ if not exists(select 1 from rdo_private.migrations where id='default_roles_v1') then
+  insert into rdo_private.roles(name) values
+   ('Gestão Produção'),('Ajudante'),('Armador'),('Carpinteiro'),('Escavador'),('Encanador'),
+   ('Eletricista'),('Pintor'),('Pedreiro'),('Operador de máquinas'),('Mão de obra especializada')
+  on conflict do nothing;
+  insert into rdo_private.migrations values ('default_roles_v1');
+ end if;
+end $$;
+alter table rdo_private.projects enable row level security;
+alter table rdo_private.roles enable row level security;
+alter table rdo_private.issues enable row level security;
+alter table rdo_private.settings enable row level security;
+alter table rdo_private.migrations enable row level security;
+revoke all on all tables in schema rdo_private from public, anon, authenticated;
+
+create or replace function public.sealt_rdo_api(
+ p_action text, p_payload jsonb default '{}'::jsonb, p_password text default null
+) returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+declare
+ v_project rdo_private.projects%rowtype;
+ v_issue rdo_private.issues%rowtype;
+ v_id uuid;
+ v_request uuid;
+ v_number bigint;
+ v_manual boolean;
+ v_name text;
+ v_item jsonb;
+ v_salt text;
+ v_hash text;
+ v_ok boolean;
+begin
+ if p_action not in ('get','issue') then
+  select password_salt,password_hash into v_salt,v_hash from rdo_private.settings where id;
+  v_ok := p_password is not null and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(v_salt || p_password,'UTF8')),'hex') = v_hash;
+  if not coalesce(v_ok,false) then raise exception 'Senha incorreta.' using errcode='28000'; end if;
+ end if;
+ if p_action = 'verify' then return jsonb_build_object('ok',true); end if;
+ if p_action = 'issue' then
+  v_id := (p_payload->>'projectId')::uuid;
+  v_request := (p_payload->>'requestId')::uuid;
+  if v_id is null or v_request is null then raise exception 'Obra e identificação do RDO são obrigatórios.'; end if;
+  -- Bloqueia a obra: duas emissões automáticas recebem números diferentes.
+  select * into v_project from rdo_private.projects where id=v_id for update;
+  if not found or not v_project.active then raise exception 'A obra foi excluída. Selecione outra obra.'; end if;
+  -- Repetir a mesma requisição após uma falha de conexão não avança novamente.
+  select * into v_issue from rdo_private.issues where request_id=v_request;
+  if found then
+   if v_issue.project_id <> v_id then raise exception 'Identificação de RDO já utilizada em outra obra.'; end if;
+   return jsonb_build_object('number',v_issue.number,'projectId',v_id,'name',v_project.name,'next',v_project.next_number);
+  end if;
+  v_manual := coalesce((p_payload->>'manual')::boolean,false);
+  if v_manual then v_number := (p_payload->>'number')::bigint; else v_number := v_project.next_number; end if;
+  if v_number is null or v_number not between 1 and 999999999 then raise exception 'Informe um número inteiro entre 1 e 999999999.'; end if;
+  insert into rdo_private.issues(request_id,project_id,number,manual) values(v_request,v_id,v_number,v_manual);
+  update rdo_private.projects set next_number=greatest(next_number,v_number+1) where id=v_id returning * into v_project;
+  return jsonb_build_object('number',v_number,'projectId',v_id,'name',v_project.name,'next',v_project.next_number);
+ elsif p_action = 'add_project' then
+  v_name := btrim(p_payload->>'name'); v_number := (p_payload->>'next')::bigint;
+  if v_name is null or v_number is null or v_number not between 1 and 999999999 then raise exception 'Nome e próximo número são obrigatórios.'; end if;
+  insert into rdo_private.projects(name,next_number) values(v_name,v_number);
+ elsif p_action = 'set_next' then
+  v_id := (p_payload->>'id')::uuid; v_number := (p_payload->>'next')::bigint;
+  if v_number is null or v_number not between 1 and 999999999 then raise exception 'Número inválido.'; end if;
+  select * into v_project from rdo_private.projects where id=v_id and active for update;
+  if not found then raise exception 'A obra não está mais cadastrada.'; end if;
+  if (p_payload->>'expectedNext')::bigint is distinct from v_project.next_number then raise exception 'A numeração mudou em outro aparelho. Atualize o cadastro antes de editar.'; end if;
+  update rdo_private.projects set next_number=v_number where id=v_id;
+ elsif p_action = 'delete_project' then
+  update rdo_private.projects set active=false where id=(p_payload->>'id')::uuid and active;
+ elsif p_action = 'add_role' then
+  insert into rdo_private.roles(name) values(btrim(p_payload->>'name'));
+ elsif p_action = 'delete_role' then
+  delete from rdo_private.roles where name=p_payload->>'name';
+ elsif p_action = 'import' then
+  if jsonb_typeof(p_payload->'projects') is distinct from 'array' or jsonb_typeof(p_payload->'roles') is distinct from 'array' then raise exception 'Cadastros locais inválidos.'; end if;
+  if jsonb_array_length(p_payload->'projects') > 500 or jsonb_array_length(p_payload->'roles') > 500 then raise exception 'Importe até 500 obras e funções por vez.'; end if;
+  for v_item in select value from jsonb_array_elements(p_payload->'projects') loop
+   v_name := btrim(v_item->>'name'); v_number := (v_item->>'next')::bigint;
+   if v_name is null or v_number is null or v_number not between 1 and 999999999 then raise exception 'Cadastro local inválido.'; end if;
+   insert into rdo_private.projects(name,next_number) values(v_name,v_number)
+    on conflict (lower(btrim(name))) where active
+    do update set next_number=greatest(rdo_private.projects.next_number,excluded.next_number);
+  end loop;
+  for v_name in select btrim(value) from jsonb_array_elements_text(p_payload->'roles') loop
+   insert into rdo_private.roles(name) values(v_name) on conflict do nothing;
+  end loop;
+ elsif p_action <> 'get' then raise exception 'Ação inválida.';
+ end if;
+ return jsonb_build_object(
+  'projects',coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',name,'next',next_number) order by lower(name)) from rdo_private.projects where active),'[]'::jsonb),
+  'roles',coalesce((select jsonb_agg(name order by lower(name)) from rdo_private.roles),'[]'::jsonb)
+ );
+exception when unique_violation then raise exception 'Obra ou função já cadastrada. Atualize a lista.';
+end;
+$$;
+revoke all on function public.sealt_rdo_api(text,jsonb,text) from public;
+grant execute on function public.sealt_rdo_api(text,jsonb,text) to anon, authenticated;
+notify pgrst, 'reload schema';
+commit;
+</script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const reportDateInput = document.getElementById('report-date');
@@ -284,29 +441,77 @@
       let committedReport = null;
       let manualNumber = false;
       let registryAuthorized = false;
-      const REGISTRY_PASSWORD = 'rdo2026altis';
+      let registryPassword = null;
+      const config = JSON.parse(document.getElementById('rdo-config').textContent);
+      let registryData = {projects: [], roles: []};
+      let connected = false;
+      let syncing = null;
+      let mutating = false;
+      let issuanceId = crypto.randomUUID();
+      const configured = Boolean(config.url && config.key);
+      const syncStatus = document.getElementById('sync-status');
       let busy = false;
       let pendingPhotos = 0;
       const projectSelect = document.getElementById('project-name');
       const reportNumber = document.getElementById('report-number');
-      const defaultRoles = ['Gestão Produção','Ajudante','Armador','Carpinteiro','Escavador','Encanador','Eletricista','Pintor','Pedreiro','Operador de máquinas','Mão de obra especializada'];
-      function readRegistry() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { projects: [], roles: defaultRoles.slice() };
-        const data = JSON.parse(raw);
-        if (!Array.isArray(data.projects) || !Array.isArray(data.roles)) throw new Error('Cadastro inválido');
-        return data;
+      function readRegistry() { return registryData; }
+      async function api(action, payload = {}, password = null) {
+        if (!configured) throw new Error('A conexão compartilhada ainda não foi configurada.');
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 20000);
+        try {
+          const headers = {'Content-Type':'application/json', apikey: config.key};
+          if (config.key.startsWith('eyJ')) headers.Authorization = `Bearer ${config.key}`;
+          const response = await fetch(`${config.url.replace(/\/$/, '')}/rest/v1/rpc/sealt_rdo_api`, {
+            method:'POST', headers, signal:controller.signal,
+            body:JSON.stringify({p_action:action,p_payload:payload,p_password:password})
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.message || 'Não foi possível acessar o banco de dados.');
+          return result;
+        } catch (error) {
+          if (error.name === 'AbortError' || error instanceof TypeError) throw new Error('Sem conexão com o banco. Confira a internet e tente novamente.');
+          throw error;
+        } finally { clearTimeout(timer); }
       }
-      function mutateRegistry(change) {
-        if (!registryAuthorized) return Promise.resolve(showStatusMessage('Entre com a senha para alterar os cadastros.', 'bg-red-500'));
-        const run = () => {
-          const data = readRegistry();
-          change(data);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      function connectionStatus(text) { syncStatus.textContent = text; }
+      async function syncRegistry(render = true) {
+        if (syncing) return syncing;
+        syncing = (async () => {
+          try {
+            const data = await api('get');
+            if (!Array.isArray(data.projects) || !Array.isArray(data.roles)) throw new Error('Resposta inválida do banco.');
+            registryData = data; connected = true;
+            connectionStatus('Cadastros compartilhados • atualizado às ' + new Date().toLocaleTimeString('pt-BR'));
+            if (render) refreshRegistry();
+          } catch (error) {
+            connected = false;
+            connectionStatus(error.message + ' A emissão automática precisa de conexão.');
+            throw error;
+          } finally { syncing = null; }
+        })();
+        return syncing;
+      }
+      async function mutateRegistry(action, payload) {
+        if (!registryAuthorized || !registryPassword) { showStatusMessage('Entre com a senha para alterar os cadastros.', 'bg-red-500'); return false; }
+        if (mutating) return false;
+        mutating = true;
+        document.getElementById('registry-view').inert = true;
+        try {
+          registryData = await api(action, payload, registryPassword);
+          connected = true;
+          if ((action === 'set_next' || action === 'delete_project') && projectSelect.value === payload.id) {
+            committedReport = null; manualNumber = false; issuanceId = crypto.randomUUID();
+          }
           refreshRegistry();
-        };
-        return (navigator.locks ? navigator.locks.request(STORAGE_KEY, run) : Promise.resolve().then(run))
-          .catch(error => { console.error(error); showStatusMessage(error.message || 'Não foi possível salvar o cadastro.', 'bg-red-500'); });
+          connectionStatus('Cadastros compartilhados • alterações salvas no banco.');
+          showStatusMessage('Cadastro atualizado para todos os aparelhos.', 'bg-green-500');
+          return true;
+        } catch (error) {
+          showStatusMessage(error.message, 'bg-red-500');
+          await syncRegistry().catch(() => {});
+          return false;
+        } finally { mutating = false; document.getElementById('registry-view').inert = false; }
       }
       function selectedProject() { return readRegistry().projects.find(p => p.id === projectSelect.value); }
       function projectName() { return projectSelect.selectedOptions[0]?.textContent || ''; }
@@ -314,7 +519,7 @@
         const project = selectedProject();
         if (!manualNumber || committedReport || !project) reportNumber.value = project ? (committedReport?.projectId === project.id ? committedReport.number : project.next) : '';
         document.getElementById('sequence-hint').textContent = project
-          ? (committedReport ? 'PDF já emitido. Gerar novamente mantém este número. Edite-o para corrigir ou use Novo RDO.' : 'Número sugerido pela obra. Você pode editar para corrigir um RDO; números anteriores não reduzem a sequência.')
+          ? (committedReport ? 'PDF já emitido. Gerar novamente mantém este número. Edite-o para corrigir ou use Novo RDO.' : 'Número previsto no banco. A reserva é feita ao gerar o PDF. Você pode editar para corrigir um RDO.')
           : 'Selecione uma obra. Se necessário, acesse Cadastro.';
       }
       function refreshRegistry() {
@@ -323,7 +528,7 @@
         projectSelect.replaceChildren(new Option('Selecione uma obra cadastrada', ''));
         data.projects.forEach(p => projectSelect.add(new Option(p.name, p.id)));
         projectSelect.value = data.projects.some(p => p.id === selection) ? selection : '';
-        if (selection && !projectSelect.value) { committedReport = null; manualNumber = false; }
+        if (selection && !projectSelect.value) { committedReport = null; manualNumber = false; issuanceId = crypto.randomUUID(); }
         const projects = document.getElementById('project-list');
         projects.replaceChildren();
         data.projects.forEach(project => {
@@ -341,19 +546,11 @@
             event.preventDefault();
             const next = Number(number.value);
             if (!number.checkValidity() || !Number.isSafeInteger(next) || next < 1 || next > 999999999) { number.reportValidity(); return; }
-            await mutateRegistry(data => {
-              const current = data.projects.find(p => p.id === project.id);
-              if (!current) throw new Error('A obra não está mais cadastrada.');
-              current.next = next;
-              if (projectSelect.value === project.id) { committedReport = null; manualNumber = false; }
-            });
+            await mutateRegistry('set_next', {id:project.id,next,expectedNext:project.next});
           };
           remove.onclick = () => {
-            if (!confirm(`Excluir a obra "${project.name}" e sua sequência do cadastro? Os PDFs já baixados permanecem no seu aparelho.`)) return;
-            mutateRegistry(data => {
-              data.projects = data.projects.filter(p => p.id !== project.id);
-              if (projectSelect.value === project.id) { committedReport = null; manualNumber = false; }
-            });
+            if (!confirm(`Excluir a obra "${project.name}" do cadastro compartilhado? Os PDFs já baixados permanecem no seu aparelho.`)) return;
+            mutateRegistry('delete_project', {id:project.id});
           };
           actions.append(save, remove); row.append(name, label, actions); projects.append(row);
         });
@@ -369,17 +566,20 @@
           const entry = document.createElement('div'); entry.className = 'registry-row';
           const text = document.createElement('span'); text.textContent = role;
           const remove = document.createElement('button'); remove.textContent = 'Excluir'; remove.type = 'button';
-          remove.addEventListener('click', () => { if (confirm(`Excluir a função "${role}" do cadastro?`)) mutateRegistry(d => { d.roles = d.roles.filter(r => r !== role); }); });
+          remove.addEventListener('click', () => { if (confirm(`Excluir a função "${role}" do cadastro?`)) mutateRegistry('delete_role', {name:role}); });
           entry.append(text, remove); roles.append(entry);
         });
         updateNumber();
       }
-      function showView(view) {
+      async function showView(view) {
         if (busy) return;
         if (view === 'registry' && !registryAuthorized) { openRegistryAuth(); return; }
-        if (view !== 'registry') registryAuthorized = false;
-        ['home','auth','registry','report'].forEach(name => document.getElementById(`${name}-view`).hidden = name !== view);
-        if (view === 'registry' || view === 'report') refreshRegistry();
+        if (view !== 'registry') { registryAuthorized = false; registryPassword = null; }
+        ['home','auth','registry','report','setup'].forEach(name => document.getElementById(`${name}-view`).hidden = name !== view);
+        if (view === 'registry' || view === 'report') {
+          refreshRegistry();
+          await syncRegistry().catch(error => showStatusMessage(error.message, 'bg-red-500'));
+        }
         window.scrollTo(0,0);
       }
       function openRegistryAuth() {
@@ -389,49 +589,62 @@
         document.getElementById('auth-description').textContent = 'Informe a senha padrão para cadastrar obras e funções.';
         document.getElementById('registry-password').focus();
       }
-      document.getElementById('auth-form').onsubmit = event => {
+      document.getElementById('auth-form').onsubmit = async event => {
         event.preventDefault();
-        const errorField = document.getElementById('auth-error');
-        errorField.textContent = '';
-        if (document.getElementById('registry-password').value !== REGISTRY_PASSWORD) {
-          errorField.textContent = 'Senha incorreta.';
-          return;
-        }
-        registryAuthorized = true;
-        document.getElementById('auth-form').reset();
-        showView('registry');
+        const button = document.getElementById('auth-submit');
+        if (button.disabled) return;
+        button.disabled = true;
+        const errorField = document.getElementById('auth-error'); errorField.textContent = '';
+        try {
+          const password = document.getElementById('registry-password').value;
+          await api('verify', {}, password);
+          if (document.getElementById('auth-view').hidden) return;
+          registryAuthorized = true; registryPassword = password;
+          document.getElementById('auth-form').reset();
+          await showView('registry');
+        } catch (error) { errorField.textContent = error.message; }
+        finally { button.disabled = false; }
       };
       document.getElementById('open-report').onclick = () => showView('report');
       document.getElementById('open-registry').onclick = () => showView('registry');
       document.getElementById('report-registry').onclick = () => showView('registry');
       document.querySelectorAll('.back-home').forEach(b => b.onclick = () => showView('home'));
-      const normalized = text => text.trim().normalize('NFKC').toLocaleLowerCase('pt-BR');
       document.getElementById('project-form').onsubmit = async event => {
         event.preventDefault();
         const name = document.getElementById('new-project').value.trim();
         const next = Number(document.getElementById('initial-number').value);
         if (!name || !Number.isSafeInteger(next) || next < 1 || next > 999999999) return;
-        await mutateRegistry(data => {
-          if (data.projects.some(p => normalized(p.name) === normalized(name))) throw new Error('Essa obra já está cadastrada.');
-          data.projects.push({ id: crypto.randomUUID(), name, next });
-          document.getElementById('project-form').reset();
-        });
+        if (await mutateRegistry('add_project', {name,next})) document.getElementById('project-form').reset();
       };
       document.getElementById('role-form').onsubmit = async event => {
         event.preventDefault();
         const name = document.getElementById('new-role').value.trim();
         if (!name) return;
-        await mutateRegistry(data => {
-          if (data.roles.some(r => normalized(r) === normalized(name))) throw new Error('Essa função já está cadastrada.');
-          data.roles.push(name); document.getElementById('role-form').reset();
-        });
+        if (await mutateRegistry('add_role', {name})) document.getElementById('role-form').reset();
       };
-      projectSelect.onchange = () => { committedReport = null; manualNumber = false; updateNumber(); };
-      reportNumber.oninput = () => { committedReport = null; manualNumber = true; updateNumber(); };
-      window.addEventListener('storage', e => { if (e.key === STORAGE_KEY && !busy) refreshRegistry(); });
+      document.getElementById('import-local').onclick = async () => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) { showStatusMessage('Não há cadastros antigos neste navegador.', 'bg-gray-500'); return; }
+          const data = JSON.parse(raw);
+          if (!Array.isArray(data.projects) || !Array.isArray(data.roles)) throw new Error('Cadastros locais inválidos.');
+          if (!confirm('Importar obras e funções deste navegador para todos os aparelhos? Para obras com o mesmo nome, será mantido o maior próximo número.')) return;
+          await mutateRegistry('import', data);
+        } catch (error) { showStatusMessage(error.message, 'bg-red-500'); }
+      };
+      document.getElementById('refresh-registry').onclick = () => syncRegistry().catch(error => showStatusMessage(error.message, 'bg-red-500'));
+      projectSelect.onchange = () => { committedReport = null; manualNumber = false; issuanceId = crypto.randomUUID(); updateNumber(); };
+      reportNumber.oninput = () => { committedReport = null; manualNumber = true; issuanceId = crypto.randomUUID(); updateNumber(); };
+      // Atualiza ao voltar ao site e a cada 30 segundos; não apaga edições em Cadastro.
+      const passiveSync = () => {
+        if (configured && !busy && !mutating && !document.hidden && document.getElementById('registry-view').hidden && document.getElementById('setup-view').hidden) syncRegistry().catch(() => {});
+      };
+      window.addEventListener('focus', passiveSync);
+      document.addEventListener('visibilitychange', passiveSync);
+      setInterval(passiveSync, 30000);
       document.getElementById('new-report').onclick = () => {
         if (!confirm('Limpar o formulário para iniciar um novo RDO?')) return;
-        committedReport = null; manualNumber = false;
+        committedReport = null; manualNumber = false; issuanceId = crypto.randomUUID();
         reportDateInput.value = getCurrentDate(); dayOfWeekInput.value = getDayOfWeek(reportDateInput.value);
         laborTableBody.querySelectorAll('input').forEach(i => i.value = '0');
         activitiesContainer.replaceChildren(); occurrencesContainer.replaceChildren();
@@ -440,7 +653,33 @@
         ['weather-morning','weather-afternoon','practicable-morning','practicable-afternoon'].forEach(id => document.getElementById(id).selectedIndex = 0);
         updateNumber(); window.scrollTo(0,0);
       };
-      try { refreshRegistry(); } catch (e) { showStatusMessage('Não foi possível acessar os cadastros. Verifique o armazenamento do navegador.', 'bg-red-500'); }
+      function downloadFile(name, content, mime) {
+        const url = URL.createObjectURL(new Blob([content], {type:mime}));
+        const link = document.createElement('a'); link.href=url; link.download=name; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      document.getElementById('download-sql').onclick = () => downloadFile('configurar-rdo.sql', document.getElementById('database-setup').textContent, 'text/plain;charset=utf-8');
+      document.getElementById('setup-form').onsubmit = event => {
+        event.preventDefault();
+        try {
+          const url = new URL(document.getElementById('setup-url').value.trim());
+          const key = document.getElementById('setup-key').value.trim();
+          if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('Informe somente a URL HTTPS do projeto.');
+          let validKey = key.startsWith('sb_publishable_');
+          if (key.startsWith('eyJ')) {
+            try { const token = JSON.parse(atob(key.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); validKey = token.role === 'anon'; } catch (e) { validKey = false; }
+          }
+          if (!validKey) throw new Error('Use a chave pública Publishable ou anon, nunca uma chave secret/service_role.');
+          const copy = document.documentElement.cloneNode(true);
+          copy.querySelector('#rdo-config').textContent = JSON.stringify({url:url.origin,key}).replaceAll('<', String.fromCharCode(92) + 'u003c');
+          copy.querySelector('#setup-key').removeAttribute('value');
+          copy.querySelectorAll('.fixed').forEach(el => el.remove());
+          downloadFile('index.html', '<!DOCTYPE html>\n' + copy.outerHTML, 'text/html;charset=utf-8');
+          document.getElementById('setup-error').textContent = '';
+        } catch (error) { document.getElementById('setup-error').textContent = error.message; }
+      };
+      if (configured) { showView('home'); syncRegistry().catch(() => {}); }
+      else { connectionStatus('Conexão compartilhada ainda não configurada.'); showView('setup'); }
 
 
       // Logo fallback em base64
@@ -653,10 +892,17 @@
         showStatusMessage("Gerando PDF...", "bg-gray-500");
 
         try {
-          updateNumber();
-          const issuedNumber = Number(reportNumber.value);
-          const issuingProject = selectedProject();
+          if (!window.jspdf?.jsPDF) throw new Error('A biblioteca de PDF não carregou. Verifique a conexão e atualize a página.');
+          await syncRegistry();
+          let issuingProject = selectedProject();
           if (!issuingProject) throw new Error('Selecione uma obra cadastrada.');
+          if (!committedReport) {
+            const issued = await api('issue', {projectId:issuingProject.id,requestId:issuanceId,manual:manualNumber,number:Number(reportNumber.value)});
+            committedReport = {projectId:issued.projectId,number:issued.number,name:issued.name};
+            issuingProject.next = issued.next;
+          }
+          const issuedNumber = committedReport.number;
+          reportNumber.value = String(issuedNumber);
           const { jsPDF } = window.jspdf;
           const pdf = new jsPDF('p', 'mm', 'a4');
           const pageWidth = pdf.internal.pageSize.getWidth();
@@ -867,18 +1113,11 @@
           const fileNameDate = formatDateForFileName(reportDateInput.value);
           const obra = sanitizeFileName(projectName());
           const fileName = `${fileNameDate} ${obra} - RDO.pdf`;
-          // Produz o documento antes de reservar o número; a reserva é persistida antes do download.
+          // Número reservado no servidor com uma chave estável para repetição segura.
           pdf.output('arraybuffer');
-          if (!committedReport) {
-            const latest = readRegistry();
-            const project = latest.projects.find(p => p.id === issuingProject.id);
-            if (!project) throw new Error('A obra não está mais cadastrada.');
-            project.next = Math.max(project.next, issuedNumber + 1);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(latest));
-            committedReport = { projectId: project.id, number: issuedNumber };
-          }
           await pdf.save(fileName, { returnPromise: true });
           updateNumber();
+          syncRegistry().catch(() => {});
 
           showStatusMessage("PDF gerado com sucesso!", "bg-green-500");
         } catch (error) {
@@ -891,8 +1130,7 @@
         }
       }
       generatePdfBtn.addEventListener('click', () => {
-        if (navigator.locks) navigator.locks.request(STORAGE_KEY, generatePDF);
-        else generatePDF();
+        generatePDF();
       });
     });
   </script>
