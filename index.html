@@ -700,7 +700,7 @@ commit;
       }
       function formatDateForFileName(dateString) {
         const [year, month, day] = dateString.split('-');
-        return `${day}.${month}.${year.slice(-2)}`;
+        return `${year.slice(-2)}.${month}.${day}`;
       }
       function getDayOfWeek(dateString) {
         const days = ['Domingo','Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira','Sábado'];
@@ -1113,7 +1113,7 @@ commit;
           // Salvar PDF (nome seguro)
           const fileNameDate = formatDateForFileName(reportDateInput.value);
           const obra = sanitizeFileName(projectName());
-          const fileName = `${fileNameDate} ${obra} - RDO.pdf`;
+          const fileName = `${fileNameDate} ${obra} - RDO ${issuedNumber}.pdf`;
           // Número reservado no servidor com uma chave estável para repetição segura.
           pdf.output('arraybuffer');
           await pdf.save(fileName, { returnPromise: true });
